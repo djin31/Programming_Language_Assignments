@@ -1,0 +1,82 @@
+type 'a mystring  = {mutable seen: 'a list;mutable unseen: 'a list;mutable head: 'a;mutable tail: 'a};;
+
+exception AtFirst;;
+
+exception AtLast;;
+
+exception TooShort;;
+
+let rec listlength l = match l with
+		[] -> 0 | x::xs -> 1 + (listlength xs);;
+
+let lgh s = match s with
+		{seen=l1;unseen=l2} -> (List.length l1) + (List.length l2);;
+
+let nonempty s = match s with
+		{unseen=[]} -> false
+		|_ -> true;;
+
+let rec listreverse l = match l with
+		[]->[]|[a]->[a]|x::xs -> (listreverse xs)@[x];;
+
+let concat s1 s2 = match s1,s2 with
+		({unseen=[]},{unseen=[]}) -> s1
+		|({unseen = x::xs},{unseen = []}) -> s1
+		|({unseen = []},{unseen = x::xs}) -> s2
+		|({unseen = x::xs},{unseen = y::ys}) -> {seen = s1.seen;unseen = s1.unseen @ (listreverse s2.seen) @ s2.unseen; head = s1.head;tail = s2.tail};;
+
+let listtail l = match l with
+		[]->[]|[a]->[a]|x::xs -> xs;;
+
+let listhead l = match l with
+		[]->raise AtLast|[a]->a|x::xs->x;;
+
+let reverse s = match s with
+		{unseen=[]}->s
+		|{unseen=x::xs}-> {seen= listreverse xs; unseen = x:: (listreverse s.seen); head=s.tail; tail= s.head};;
+
+let first s = s.head;;
+
+let last s = s.tail;;
+
+let forward s = match s with 
+		{unseen=[a]}-> raise AtLast
+		|{unseen = []} -> raise AtLast
+		|{seen = l1; unseen = x::y::xs} -> {seen=x::l1; unseen = y::xs; head = s.head; tail = s.tail};;
+
+let back s = match s with
+		{seen =[]} -> raise AtFirst
+		|{seen = x::xs} -> {seen = xs; unseen = x::s.unseen ; head = s.head; tail = s.tail};;
+
+let rec chararray i s l =
+	if i < 0 then l else chararray (i - 1) s (s.[i] :: l);;
+
+let rec listend l = match l with 
+		[]->None|[a]-> a|x::xs -> listend xs;;
+
+let create s = 
+	let l = chararray (String.length s - 1) s [] in
+	match l with
+		[]-> {seen=[];unseen=[];head=None;tail=None}
+		|x::xs -> {seen=[];unseen=x::xs;head = x; tail = listend x::xs };;
+
+
+let create s = match s with
+		"" -> {seen=[];unseen=[];head=None;tail=None}
+		|_->
+		let es = {seen=[];unseen=[];head=None;tail=None} in
+			es.head <- s.[0]; 
+			for i = 0  to (String.length s-1) do
+				s.unseen<-s.unseen @ [s.[i]];
+				s.tail<-s.[i];
+			done;
+			es;;
+
+let moveto n s = 
+	if n >= (String.length s) then raise TooShort
+	else
+		let es = ref (create s) in
+		for i = 0 to n-1 do
+			es := forward es
+		done;
+		!es;;
