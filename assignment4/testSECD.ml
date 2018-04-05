@@ -1,3 +1,7 @@
+(* defining tables *)
+let table1 = [Var "x",Number (20)];;
+let table2 = [(Var "x", Number (1)); (Var "y", Number (-1)); (Var "b", Boolean(true))];;
+
 print_string "\ntesting basic operations of language";;
 (*testing if else then conditional*)
 print_string "\ntesting if else then conditional";;
@@ -22,24 +26,16 @@ print_string "\ntesting tuples and projection";;
 let x = Add(Nat 1, Proj (2,Tup([Nat 1; Nat 2; Nat 3])));;
 compile x;;
 runSECD table1 x;;
-runKrivine [] x;;
 
 let y = Tup([Nat 1; Nat 2; Nat 3]);;
 runSECD table1 y;;
-runKrivine [] y;;
 
 let z = Equals(Tup([Nat 1; Nat 2; Nat 3]),Tup([Nat 1; Add(Nat 1,Nat 1); Nat 3]));;
 compile z;;
 runSECD table1 z;;
-runKrivine [] z;;
 
 (*testing lambda calculus*)
 print_string "\n testing lambda calculus now";;
-
-
-(* defining tables *)
-let table1 = [Var "x",Number (20)];;
-let table2 = [(Var "x", Number (1)); (Var "y", Number (-1)); (Var "b", Boolean(true))];;
 
 (*testing functions on variables*)
 print_string "\ntesting functions on variables";;
@@ -67,7 +63,7 @@ compile succ;;
 runSECD table1 succ;;
 runSECD [] succ;;
 
-let is_negative = Lambda(Var "x", Cond(Less (V (Var "x"),Nat 0), T, F));;
+let is_negative = Lambda(Var "x", Cond(Less (V (Var "x"),Nat 0), Bool true, Bool false));;
 compile is_negative;;
 runSECD table1 is_negative;;
 runSECD [] is_negative;;
