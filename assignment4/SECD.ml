@@ -32,7 +32,8 @@ type opcode = 	 VAR of string
 				|EQUALS
 				|LESS
 				|COND of (opcode list)*(opcode list)
-				|TUPLE of int;;
+				|TUPLE of int
+				|PROJ of int;;
 				
 
 let rec map f l =match l with				(* implements higher order function map *)
@@ -66,7 +67,7 @@ let rec compile e = match e with
 				|Less(e1,e2) -> (compile e1)@(compile e2)@[LESS]
 				|Cond(e0,e1,e2) -> (compile e0) @ [COND(compile e1, compile e2)]
 				|Tup(l) -> (reduce append (map compile l) []) @ [TUPLE (length l)]			(* compiles the opcodes for all the tuple elements and concatenates them one after another *)
-				|Proj(n,Tup(l)) -> compile(givepos n l)
+				|Proj(n,e1) -> compile(e1)@[PROJ n]
 				|V(Var x) -> [VAR x]
 				|Lambda(Var x,e1) -> [LAMBDA(VAR x,(compile e1))]
 				|Call(e1,e2) -> (compile e1)@[ARG(compile e2)]@[APPLY]
@@ -97,6 +98,7 @@ let rec executeSECD stack env code dump = match (stack,env,code,dump) with
 				|((Boolean true)::s, e, COND(c1,c2)::c, d) -> executeSECD s e (c1@c) d
 				|((Boolean false)::s, e, COND(c1,c2)::c, d) -> executeSECD s e (c2@c) d
 				|(s, e, TUPLE(n)::c, d) -> executeSECD ((Tuple(pop n s []))::(remove n s)) e c d
+				|(Tuple(l)::s,e, PROJ(n)::c, d) -> executeSECD ((givepos n l)::s) e c d
 				|(s, e, (VAR x)::c, d) -> executeSECD ((lookup (Var x) e)::s) e c d
 				|(s, e, (LAMBDA(VAR x, t))::c, d) -> executeSECD ((Vclosure (e,Var x, t))::s) e c d
 				|(s, e, ARG(l)::c, d) -> executeSECD s e (l@c) d

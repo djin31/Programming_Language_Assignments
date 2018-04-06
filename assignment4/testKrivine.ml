@@ -1,26 +1,26 @@
 (* defining tables *)
-let table1 = [Var "x",Clos([],Nat 20)];;
+let table1 = [Var "x",Clos([],Add(Nat 10, Nat 10))];;
 let table2 = [(Var "x", Clos([],Nat 1)); (Var "y", Clos([],Nat (-1))); (Var "b", Clos([],Bool true))];;
 
 print_string "\ntesting basic operations of language";;
 (*testing if else then conditional*)
 print_string "\ntesting if else then conditional";;
-let code = Add(Cond(Less(Nat 31, Nat 20),Nat 3,Nat 1),Nat 20);;
+let code = Add(Cond(Less(Nat 31, Nat 20),Nat 3,Nat 1),Nat 20);;				(*(if (31<20) then 2 else 1) + 20*)
 runKrivine [] code;;
 
 (*testing binary arithmetic operands*)
 print_string "\ntesting binary arithmetic operations";;
-let code = Add(Nat 1, Mul(Nat 2, Nat 3));;
+let code = Add(Nat 1, Mul(Nat 2, Nat 3));;									(*1+2*3*)
 runKrivine [] code;;
 
 (*testing boolean operation*)
 print_string "\ntesting boolean operations";;
-let code = And(Less(Nat 1,Nat 2),Equals(Add (Nat 1,Nat 1),Nat 2));;
+let code = And(Less(Nat 1,Nat 2),Equals(Add (Nat 1,Nat 1),Nat 2));;			(*(1<2) && ((1+1)==2)*)
 runKrivine [] code;;
 
 (*testing tuples*)
 print_string "\ntesting tuples and projection";;
-let x = Add(Nat 1, Proj (2,Tup([Nat 1; Nat 2; Nat 3])));;
+let x = Add(Nat 1, Proj (2,Tup([Nat 1; Nat 2; Nat 3])));;					(* 1 + 3rd element of tuple(1;2;3) *)
 runKrivine table1 x;;
 
 let y = Tup([Nat 1; Nat 2; Nat 3]);;
@@ -57,16 +57,73 @@ let is_negative = Lambda(Var "x", Cond(Less (V (Var "x"),Nat 0), Bool true, Bool
 runKrivine table1 is_negative;;
 runKrivine [] is_negative;;
 
-print_string "\n testing invokation of abstractions";;
+print_string "\n testing invocation of abstractions";;
 let code = (Call(succ,(V (Var "x"))));;
 runKrivine table1 code;;
 
 let code = Call(is_negative,Call(succ,V (Var "y")));; 
 runKrivine table2 code;;
 
-let code = Add(Nat 31,Cond(Call(is_negative,Call(succ,V (Var "y"))),Nat 2, Proj(1,Tup([V(Var "x");V(Var "y")]))));;
+let code = Add(Nat 31,Cond(Call(is_negative,Call(succ,V (Var "y"))),Nat 2, Proj(1,Tup([V(Var "x");V(Var "y")]))));; (* 31 + if (y<0) then 2 else 2nd element of (x,y)*)
 runKrivine table2 code;;
 
 let code = Equals(V(Var "b"),Call(is_negative,Call(succ,V (Var "y"))));;
 runKrivine table2 code;;
 
+(*General testing*)
+let var1 = Var ("X");;
+let var2 = Var ("Y");;
+let var3 = Var ("Z");;
+let var4 = Var ("W");;
+let myTable = [ (var1, Clos([],Nat (25)));  (var2, Clos([],Bool true));  (var3, ClosTuple ([Clos([],Nat (4)); Clos([],Bool false); Clos([],Nat (0))]));  (var4,  Clos([],Nat (2)))];;
+
+let exp1 = Add (Nat (4), Nat(5));;
+runKrivine [] exp1;;
+
+let exp2 = Equals (exp1, Nat(9));;
+runKrivine [] exp2;;
+
+let exp3 = Cond (exp2, Nat (1), Nat (0));;
+runKrivine [] exp3;;
+
+let exp4 = Cond (Less (Nat (0), Nat (8)), Nat (89), Mul (V var1, V var1));;
+runKrivine [] exp4;;
+
+let exp5 = Tup([Nat (8); Bool true; Mul (Nat (9), Nat (2))]);;
+runKrivine [] exp5;;
+
+(* \x = x + 3 *)
+let func1 = Lambda (Var ("x"), Add (V (Var ("x")), Nat (3)));;
+runKrivine [] func1;;
+
+let call1 = Call (func1, Nat (92));; (* 92 + 3 *)
+runKrivine [] call1;;
+
+let call2 = Call (func1, call1);;
+runKrivine [] call2;;
+
+(* \x = x * X *)
+let func2 = Lambda (Var ("x"), Mul (V (Var "x"), V var1));;
+let call2 = Call (func2, Nat (12));; (* 25 * 12 *)
+runKrivine myTable call2;;
+
+(* \x = x * x *)
+let func3 = Lambda (Var ("x"), Mul (V (Var "x"), V (Var "x")));;
+let call3 = Call (func3, Nat (14));;
+runKrivine myTable call3;;
+
+let call4 = Call (func3, call2);;
+runKrivine myTable call4;;
+
+let call5 = Call (func3, call3);;
+runKrivine myTable call5;;
+
+(* Global var2 is true *)
+let func4 = Lambda (var2, Cond (V var2, Nat (3), Nat (9)));;
+let call6 = Call (func4, Bool false);;
+runKrivine myTable call6;;
+
+(* \x = x + w, ~ x + 2*)
+let func5 = Lambda (var1, Add (V var1, V var4));;
+let call7 = Call (func5, Nat (9));;
+runKrivine myTable call7;;
