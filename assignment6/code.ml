@@ -9,7 +9,7 @@ type term =
       |F
       |Node of string*(term list);;
 
-type atomic = Pred of string*(term list)|Cut|Fail;;
+type atomic = Pred of string*(term list)|Cut;;
 
 type clause =  
       |Fact of atomic
@@ -102,7 +102,9 @@ let rec mgu t1 t2 = match (t1,t2) with
       |(Node(s1,l1),Node(s2,l2)) -> if (s1 = s2) then (unify [] mgu l1 l2) else raise NOT_UNIFIABLE
       |_ -> raise NOT_UNIFIABLE;;
 
-let rec subst_atomic sigma (Pred(sym,l)) = (Pred(sym,(map (subst sigma) l)));;
+let rec subst_atomic sigma atm = match atm with
+      |(Pred(sym,l)) -> (Pred(sym,(map (subst sigma) l)))
+      |_ -> atm;;
 
 let rec mgu_atomic (Pred(sym1,l1)) (Pred(sym2,l2)) = 
       if (sym1 = sym2) 
@@ -116,25 +118,21 @@ let rec find_vars t = match t with
 
 let find_vars_atomic (Pred(sym,l1)) = (fold union [] (map find_vars l1));;
 
+
 let rec solve_goal prog workingprog goal = match (workingprog) with
       |[] -> []
       |((Fact atm1)::workingprog') -> 
             (try
                   let sol = mgu_atomic atm1 goal in
                   let vars = find_vars_atomic goal in
-                  sol::(solve_goal prog workingprog' goal)
+                  sol
             with 
                   |NOT_UNIFIABLE -> solve_goal prog workingprog' goal)
       |((Rule (atm1,body))::workingprog') -> 
             try
                   let sol = mgu_atomic atm1 goal in
                   let newgoals = map (subst_atomic sol) body in
-                  let newsols = solve_goallist prog newgoals in
-                  let finalsol = [] in
-                  for i in newsols do
-                        finalsol = finalsol@(union_pair i sol) 
-                  done in
-                  finalsol@(solve_goal prog workingprog' goal)
+                  (union_pair (solve_goallist prog newgoals) sol) 
             with
                   |NOT_UNIFIABLE -> solve_goal prog workingprog' goal
 
@@ -142,12 +140,21 @@ and solve_goallist prog newgoals = match newgoals with
       |[] -> []
       |(x::xs) -> 
             let sol = (solve_goal prog prog x) in
-            let retVal = [] in
-            for i in List sol do
-                  let newgoals = map (subst_atomic sol) xs in
-                  retVal@(union_pair (solve_goallist prog newgoals) sol)
-            done;;
+            let newgoals = map (subst_atomic sol) xs in
+            (union_pair (solve_goallist prog newgoals) sol);;
 
+let rec filter_unifier goalvars unif = match unif with
+      |[] -> []
+      |((v,sub)::xs) -> if (find goalvars v) then ((v,sub)::(filter_unifier goalvars xs)) else (filter_unifier goalvars xs);;
+
+let top prog goal = 
+      let goalvars = find_vars_atomic goal in
+      filter_unifier (goalvars) (solve_goal prog prog goal);;
+       
+      
+
+
+            
 
 
 
