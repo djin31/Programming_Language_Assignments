@@ -1,3 +1,4 @@
+#use "SECD.ml";;
 (* defining tables *)
 let table1 = [Var "x",Number (20)];;
 let table2 = [(Var "x", Number (1)); (Var "y", Number (-1)); (Var "b", Boolean(true))];;
@@ -86,6 +87,8 @@ compile code;;
 runSECD table2 code;;
 
 (*General testing*)
+print_string "\n General testing";;
+
 let var1 = Var ("X");;
 let var2 = Var ("Y");;
 let var3 = Var ("Z");;
@@ -123,14 +126,14 @@ let call2 = Call (func2, Nat (12));; (* 25 * 12 *)
 runSECD myTable call2;;
 
 (* \x = x * x *)
-let func3 = Lambda (Var ("x"), Mul (V (Var "x"), V (Var "x")));;
-let call3 = Call (func3, Nat (14));;
+let square = Lambda (Var ("x"), Mul (V (Var "x"), V (Var "x")));;
+let call3 = Call (square, Nat (14));;
 runSECD myTable call3;;
 
-let call4 = Call (func3, call2);;
+let call4 = Call (square, call2);;
 runSECD myTable call4;;
 
-let call5 = Call (func3, call3);;
+let call5 = Call (square, call3);;
 runSECD myTable call5;;
 
 (* Global var2 is true *)
@@ -143,11 +146,3 @@ let func5 = Lambda (var1, Add (V var1, V var4));;
 let call7 = Call (func5, Nat (9));;
 runSECD myTable call7;;
 
-let exp6 = Tup ([exp1;exp2;exp4;exp5]);;
-runSECD myTable exp6;;
-
-let exp7 = Proj (3, exp6);;
-runSECD myTable exp7;;
-
-let exp8 = Proj (2, exp7);;
-runSECD myTable exp8;;

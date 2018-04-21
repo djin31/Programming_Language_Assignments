@@ -120,4 +120,4 @@ let rec mgu t1 t2 = match (t1,t2) with
 					|(Node(Sym s1,[]),Node(Sym s2,[])) -> if (s1 = s2) then [] else raise NOT_UNIFIABLE
 					|(Node(Sym s1,[]),Node(Sym s2,l)) -> raise NOT_UNIFIABLE
 					|(Node(Sym s1,l),Node(Sym s2,[])) -> raise NOT_UNIFIABLE
-					|(Node(Sym s1,l1),Node(Sym s2,l2)) -> if (s1 = s2) then (unify [] mgu l1 l2) else raise NOT_UNIFIABLE;;
+					|(Node(Sym s1,l1),Node(Sym s2,l2)) -> if (s1 = s2) then (unify [] mgu l2 l1) else raise NOT_UNIFIABLE;;

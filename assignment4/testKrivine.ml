@@ -1,3 +1,4 @@
+#use "Krivine.ml";;
 (* defining tables *)
 let table1 = [Var "x",Clos([],Add(Nat 10, Nat 10))];;
 let table2 = [(Var "x", Clos([],Nat 1)); (Var "y", Clos([],Nat (-1))); (Var "b", Clos([],Bool true))];;
@@ -71,6 +72,8 @@ let code = Equals(V(Var "b"),Call(is_negative,Call(succ,V (Var "y"))));;
 runKrivine table2 code;;
 
 (*General testing*)
+print_string "\n General testing";;
+
 let var1 = Var ("X");;
 let var2 = Var ("Y");;
 let var3 = Var ("Z");;
@@ -108,14 +111,14 @@ let call2 = Call (func2, Nat (12));; (* 25 * 12 *)
 runKrivine myTable call2;;
 
 (* \x = x * x *)
-let func3 = Lambda (Var ("x"), Mul (V (Var "x"), V (Var "x")));;
-let call3 = Call (func3, Nat (14));;
+let square = Lambda (Var ("x"), Mul (V (Var "x"), V (Var "x")));;
+let call3 = Call (square, Nat (14));;
 runKrivine myTable call3;;
 
-let call4 = Call (func3, call2);;
+let call4 = Call (square, call2);;
 runKrivine myTable call4;;
 
-let call5 = Call (func3, call3);;
+let call5 = Call (square, call3);;
 runKrivine myTable call5;;
 
 (* Global var2 is true *)

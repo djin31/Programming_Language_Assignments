@@ -1,6 +1,5 @@
 exception MachineStuck;;
 exception UndefinedVariable;;
-exception CompilationError;;
 exception IncorrectCall;;
 
 open List;;
@@ -92,13 +91,15 @@ let rec executeKrivine clos stack = match (clos,stack) with
 			|(Clos(gamma1,Bool n),PENDING(ld)::Clos(gamma,Tup(lp))::s) -> executeKrivine (Clos(gamma,(hd lp))) (PENDING(ld@[Bool n])::Clos(gamma,Tup(tl lp))::s)
 			|(Clos(gamma1,Lambda (x,e)),PENDING(ld)::Clos(gamma,Tup(lp))::s) -> executeKrivine (Clos(gamma,(hd lp))) (PENDING(ld@[Lambda (x,e)])::Clos(gamma,Tup(tl lp))::s)
 			|(Clos(gamma,Proj(n,e1)),s) -> executeKrivine (Clos(gamma,e1)) (Clos(gamma,Proj(n,e1))::s)
-			|(ClosTuple(l),(Clos(gamma,Proj(n,e1))::s)) -> executeKrivine (givepos n l) s;;
+			|(ClosTuple(l),(Clos(gamma,Proj(n,e1))::s)) -> executeKrivine (givepos n l) s
+			|_ -> raise MachineStuck;;
 
 let rec unpack clos = match clos with 
 			|Clos(gamma,Nat n) -> Number n
 			|Clos(gamma, Bool b) -> Boolean b
 			|ClosTuple(l) -> Tuple(map unpack l)
-			|Clos(gamma,Lambda (x,e)) -> Vclosure (gamma,x,e);;
+			|Clos(gamma,Lambda (x,e)) -> Vclosure (gamma,x,e)
+			|_ -> raise MachineStuck;;
 
 let  runKrivine t e = unpack(executeKrivine (Clos(t,e)) []) ;;
 
