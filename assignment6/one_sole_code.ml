@@ -106,10 +106,13 @@ let rec subst_atomic sigma atm = match atm with
       |(Pred(sym,l)) -> (Pred(sym,(map (subst sigma) l)))
       |_ -> atm;;
 
-let rec mgu_atomic (Pred(sym1,l1)) (Pred(sym2,l2)) = 
-      if (sym1 = sym2) 
-      then (unify [] mgu l1 l2) 
-      else raise NOT_UNIFIABLE;;
+let rec mgu_atomic atm1 atm2 = match (atm1,atm2) with
+      |((Pred(sym1,l1)),(Pred(sym2,l2))) ->
+            if (sym1 = sym2) 
+            then (unify [] mgu l1 l2) 
+            else raise NOT_UNIFIABLE
+      |(Cut,Cut) -> []
+      |_ -> raise NOT_UNIFIABLE;;
 
 let rec find_vars t = match t with
       |Var v -> [t]
@@ -117,38 +120,6 @@ let rec find_vars t = match t with
       |_ -> [];;
 
 let find_vars_atomic (Pred(sym,l1)) = (fold union [] (map find_vars l1));;
-
-
-let rec solve_goal prog workingprog goal = match (workingprog) with
-      |[] -> ([],[])
-      |((Fact atm1)::workingprog') -> 
-            (try
-                  let sol = mgu_atomic atm1 goal in
-                  (sol,[workingprog'])
-            with 
-                  |NOT_UNIFIABLE -> solve_goal prog workingprog' goal)
-      |((Rule (atm1,body))::workingprog') -> 
-            try
-                  let sol = mgu_atomic atm1 goal in
-                  let newgoals = map (subst_atomic sol) body in
-                  let newsols,workleft = solve_goallist prog newgoals in
-
-                  ((union_pair newsols sol),(workleft@[workingprog]))
-            with
-                  |NOT_UNIFIABLE -> solve_goal prog workingprog' goal
-
-and solve_goallist prog newgoals = match newgoals with
-      |[] -> ([],[])
-      |(x::xs) -> 
-            let sol,left = (solve_goal prog prog x) in
-            let newgoals = map (subst_atomic sol) xs in
-            let newsols,workleft = solve_goallist prog newgoals in
-
-            ((union_pair newsols sol),(workleft@left));;
-
-let rec filter_unifier goalvars unif = match unif with
-      |[] -> []
-      |((v,sub)::xs) -> if (find goalvars v) then ((v,sub)::(filter_unifier goalvars xs)) else (filter_unifier goalvars xs);;
 
 let rec print_terms t = match t with
       |Var v -> Printf.printf " Var %s " v
@@ -165,6 +136,65 @@ let rec print_unifs unifs = match unifs with
                         let _ = print_string "\n" in
                         print_unifs xs;;
 
+let rec print_atom atm = match atm with
+      |(Pred(sym,tl)) -> Printf.printf " %s " sym; (map print_terms tl)
+      |Cut -> [Printf.printf " CUT "];;
+
+let rec replicate l n e = match n with
+      | 0 -> e
+      | n' -> replicate l (n-1) (l::e);;
+
+type leftover = Base of clause list| Left of (clause list)*(leftover list);;
+type solution = ((term*term) list, leftover list);; 
+
+let rec solve_goal prog left workingprog goal = match left with
+      |Base([],_) -> print_atom goal;raise FAILURE
+      |Left([],_)
+      |(x::xs) -> let workingprog = x in 
+                  match (workingprog) with
+                  |Base([]) -> print_atom goal;raise FAILURE
+                  |((Fact atm1)::workingprog') -> 
+                        (try
+                              let sol = mgu_atomic atm1 goal in
+                              (sol,Base(workingprog'))
+                        with 
+                              |NOT_UNIFIABLE -> solve_goal prog [Base(workingprog')] workingprog' goal)
+                  |((Rule (atm1,body))::workingprog') -> 
+                        try
+                              let sol = mgu_atomic atm1 goal in
+                              let newgoals = map (subst_atomic sol) body in
+                              if (xs = [])
+                              then  let newsols,workleft = solve_goallist prog (replicate prog (List.length body) []) newgoals in
+                                    ((union_pair newsols sol),[Left(workingprog' ,workleft)])
+                              else let newsols,workleft = solve_goallist prog xs newgoals in
+                                    ((union_pair newsols sol),[Left(workingprog' ,workleft)])
+                        with
+                              |NOT_UNIFIABLE -> solve_goal prog [Base(workingprog')] workingprog' goal
+
+and solve_goallist prog leftover newgoals =  
+            match newgoals with
+            |(x::[]) -> 
+                  (try
+                        let sol,left = (solve_goal prog  (leftover) [] x) in
+                        (sol,left)
+                  with
+                  |FAILURE -> raise NOT_UNIFIABLE)
+            |(x::xs) -> 
+                  try 
+                        let sol,left = (solve_goal prog  (leftover) [] x) in
+                        let newsols,workleft = solve_goallist prog (List.tl leftover) newgoals in
+                        ((union_pair newsols sol),(left@workleft))     
+                        with 
+                  |FAILURE -> raise NOT_UNIFIABLE
+
+            ;;
+
+let rec filter_unifier goalvars unif = match unif with
+      |[] -> []
+      |((v,sub)::xs) -> if (find goalvars v) then ((v,sub)::(filter_unifier goalvars xs)) else (filter_unifier goalvars xs);;
+
+
+
 let get1char () =
     let termio = Unix.tcgetattr Unix.stdin in
     let () =
@@ -176,8 +206,17 @@ let get1char () =
 
 let top prog goal = 
       let goalvars = find_vars_atomic goal in
-      let unifs,left = solve_goal prog prog goal in
-      (print_unifs(filter_unifier goalvars unifs),left);;
+      let unifs,left = solve_goal prog [prog] prog goal in
+      print_unifs(filter_unifier goalvars unifs); 
+
+       let unifs,left = solve_goal prog (left) [] goal in
+      print_unifs(filter_unifier goalvars unifs);
+      let unifs,left = solve_goal prog (left) [] goal in
+      print_unifs(filter_unifier goalvars unifs) ;
+      let unifs,left = solve_goal prog (left) [] goal in
+      let _ =print_unifs(filter_unifier goalvars unifs) in  
+      
+      ((filter_unifier goalvars unifs),left);;
 
       (*let choice = ref ';' in
       while (!choice = ';') do
