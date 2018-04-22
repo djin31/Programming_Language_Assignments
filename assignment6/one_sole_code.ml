@@ -56,8 +56,6 @@ let rec union_pair l1 l2 = match l2 with
       |[] -> l1
       |(v,t)::xs -> if (find_pair l1 v) then (union l1 xs) else (union ((v,t)::l1) xs);;
 
-let union_pair_invert_priority l1 l2 = union_pair l2 l1;;
-
 (* return substituent value for a variable *)
 let rec findsub s v = match s with
       |[] -> v
@@ -65,6 +63,7 @@ let rec findsub s v = match s with
 
 (* implements homomorphic extension of substitution *)
 let rec subst sigma t = match t with
+      |Node(s,[]) -> (findsub sigma t)
       |Var v ->  (findsub sigma t)
       |Node(s,l) -> Node(s,(map (subst sigma) l))
       |_ -> t;; 
@@ -119,53 +118,75 @@ let rec find_vars t = match t with
 
 let find_vars_atomic (Pred(sym,l1)) = (fold union [] (map find_vars l1));;
 
-let rec reduce f l e = match l with
-      |[] -> e
-      |(x::xs) -> reduce f xs (f e x);;
-
-let concat l1 l2 = l1@l2;;
-
 
 let rec solve_goal prog workingprog goal = match (workingprog) with
-      |[] -> []
+      |[] -> ([],[])
       |((Fact atm1)::workingprog') -> 
             (try
                   let sol = mgu_atomic atm1 goal in
-                  sol::(solve_goal prog workingprog' goal)
-
+                  (sol,[workingprog'])
             with 
                   |NOT_UNIFIABLE -> solve_goal prog workingprog' goal)
       |((Rule (atm1,body))::workingprog') -> 
             try
                   let sol = mgu_atomic atm1 goal in
-                  let further_sols = solve_goallist prog (map (subst_atomic sol) body) in
-                  (map (union_pair_invert_priority sol) further_sols) @ (solve_goal prog workingprog' goal) 
+                  let newgoals = map (subst_atomic sol) body in
+                  let newsols,workleft = solve_goallist prog newgoals in
+
+                  ((union_pair newsols sol),(workleft@[workingprog]))
             with
                   |NOT_UNIFIABLE -> solve_goal prog workingprog' goal
 
 and solve_goallist prog newgoals = match newgoals with
-      |[] -> []
+      |[] -> ([],[])
       |(x::xs) -> 
-            try
-                  let sol = (solve_goal prog prog x) in
-                  solve_compound prog sol xs  
-            with
-            | FAILURE -> []
-            
-and solve_compound prog sol rem = match sol with 
-      |[] -> []
-      |(s1::ss) -> let newgoals = map (subst_atomic s1) rem in
-                  (map (union_pair_invert_priority s1) (solve_goallist prog newgoals))@(solve_compound prog ss rem);;
+            let sol,left = (solve_goal prog prog x) in
+            let newgoals = map (subst_atomic sol) xs in
+            let newsols,workleft = solve_goallist prog newgoals in
 
+            ((union_pair newsols sol),(workleft@left));;
 
 let rec filter_unifier goalvars unif = match unif with
       |[] -> []
       |((v,sub)::xs) -> if (find goalvars v) then ((v,sub)::(filter_unifier goalvars xs)) else (filter_unifier goalvars xs);;
 
+let rec print_terms t = match t with
+      |Var v -> Printf.printf " Var %s " v
+      |Const s-> Printf.printf " %s " s
+      |Nat n -> Printf.printf " %d " n
+      |T -> Printf.printf "true"
+      |F -> Printf.printf "false"
+      |Node (s,l) -> let _ = Printf.printf " Node %s " s in List.hd (map print_terms l);;
+
+let rec print_unifs unifs = match unifs with
+      |[] -> ()
+      |((v,sub)::xs) -> let _ = print_terms v in
+                        let _ = print_terms sub in
+                        let _ = print_string "\n" in
+                        print_unifs xs;;
+
+let get1char () =
+    let termio = Unix.tcgetattr Unix.stdin in
+    let () =
+        Unix.tcsetattr Unix.stdin Unix.TCSADRAIN
+            { termio with Unix.c_icanon = false } in
+    let res = input_char stdin in
+    Unix.tcsetattr Unix.stdin Unix.TCSADRAIN termio;
+    res
+
 let top prog goal = 
       let goalvars = find_vars_atomic goal in
-      let unifs = solve_goal prog prog goal in
-      map (filter_unifier goalvars) (unifs);;
+      let unifs,left = solve_goal prog prog goal in
+      (print_unifs(filter_unifier goalvars unifs),left);;
+
+      (*let choice = ref ';' in
+      while (!choice = ';') do
+            let unifs,left = solve_goal prog prog goal in
+            print_unifs (filter_unifier goalvars unifs);
+            choice := get1char()
+      done;; *)
+
+      
        
       
 
