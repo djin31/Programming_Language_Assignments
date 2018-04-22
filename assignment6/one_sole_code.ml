@@ -144,46 +144,52 @@ let rec replicate l n e = match n with
       | 0 -> e
       | n' -> replicate l (n-1) (l::e);;
 
-type leftover = Base of clause list| Left of (clause list)*(leftover list);;
-type solution = ((term*term) list, leftover list);; 
 
-let rec solve_goal prog left workingprog goal = match left with
-      |Base([],_) -> print_atom goal;raise FAILURE
-      |Left([],_)
-      |(x::xs) -> let workingprog = x in 
-                  match (workingprog) with
-                  |Base([]) -> print_atom goal;raise FAILURE
-                  |((Fact atm1)::workingprog') -> 
-                        (try
-                              let sol = mgu_atomic atm1 goal in
-                              (sol,Base(workingprog'))
-                        with 
-                              |NOT_UNIFIABLE -> solve_goal prog [Base(workingprog')] workingprog' goal)
-                  |((Rule (atm1,body))::workingprog') -> 
-                        try
-                              let sol = mgu_atomic atm1 goal in
-                              let newgoals = map (subst_atomic sol) body in
-                              if (xs = [])
-                              then  let newsols,workleft = solve_goallist prog (replicate prog (List.length body) []) newgoals in
-                                    ((union_pair newsols sol),[Left(workingprog' ,workleft)])
-                              else let newsols,workleft = solve_goallist prog xs newgoals in
-                                    ((union_pair newsols sol),[Left(workingprog' ,workleft)])
-                        with
-                              |NOT_UNIFIABLE -> solve_goal prog [Base(workingprog')] workingprog' goal
+type leftover = Base of clause| Left of clause*(leftover list list);;
+type solution = ((term*term) list * leftover list);; 
 
-and solve_goallist prog leftover newgoals =  
-            match newgoals with
+
+let rec apply_base prog = match prog with
+      |[] -> []
+      |(x::xs) -> (Base x)::(apply_base xs);;
+
+let rec solve_goal prog left goal = match left with
+      |[] -> print_atom goal;raise FAILURE
+      |((Base(Fact atm1))::workingprog') -> 
+            (try
+                  let sol = mgu_atomic atm1 goal in
+                  (sol,workingprog')
+            with 
+                  |NOT_UNIFIABLE -> solve_goal prog workingprog' goal)
+      |((Base(Rule (atm1,body)))::workingprog') -> 
+            (try
+                  let sol = mgu_atomic atm1 goal in
+                  let newgoals = map (subst_atomic sol) body in
+                  let newsols,workleft = solve_goallist prog (replicate (apply_base prog) (List.length body) []) newgoals in
+                  ((union_pair newsols sol),Left(Rule(atm1,body) ,workleft)::workingprog')
+            with
+                  |NOT_UNIFIABLE -> solve_goal prog workingprog' goal)
+      |((Left(Rule(atm1,body),leftovers))::workingprog') ->
+            try
+                  let sol = mgu_atomic atm1 goal in
+                  let newgoals = map (subst_atomic sol) body in
+                  let newsols,workleft = solve_goallist prog leftovers newgoals in
+                  ((union_pair newsols sol),Left(Rule(atm1,body) ,workleft)::workingprog')
+            with
+                  |NOT_UNIFIABLE -> solve_goal prog workingprog' goal
+
+and solve_goallist prog leftover newgoals =  match newgoals with
             |(x::[]) -> 
                   (try
-                        let sol,left = (solve_goal prog  (leftover) [] x) in
-                        (sol,left)
+                        let sol,left = (solve_goal prog (List.hd leftover) x) in
+                        (sol,[left])
                   with
                   |FAILURE -> raise NOT_UNIFIABLE)
             |(x::xs) -> 
                   try 
-                        let sol,left = (solve_goal prog  (leftover) [] x) in
+                        let sol,left = (solve_goal prog  (List.hd leftover) x) in
                         let newsols,workleft = solve_goallist prog (List.tl leftover) newgoals in
-                        ((union_pair newsols sol),(left@workleft))     
+                        ((union_pair newsols sol),(left::workleft))     
                         with 
                   |FAILURE -> raise NOT_UNIFIABLE
 
@@ -206,24 +212,29 @@ let get1char () =
 
 let top prog goal = 
       let goalvars = find_vars_atomic goal in
-      let unifs,left = solve_goal prog [prog] prog goal in
+      (* let unifs,left = solve_goal prog (apply_base prog) goal in
       print_unifs(filter_unifier goalvars unifs); 
 
-       let unifs,left = solve_goal prog (left) [] goal in
+       let unifs,left = solve_goal prog (left) goal in
       print_unifs(filter_unifier goalvars unifs);
-      let unifs,left = solve_goal prog (left) [] goal in
+      let unifs,left = solve_goal prog (left) goal in
       print_unifs(filter_unifier goalvars unifs) ;
-      let unifs,left = solve_goal prog (left) [] goal in
+      let unifs,left = solve_goal prog (left) goal in
       let _ =print_unifs(filter_unifier goalvars unifs) in  
       
-      ((filter_unifier goalvars unifs),left);;
-
-      (*let choice = ref ';' in
+      ((filter_unifier goalvars unifs),left);; *)
+      let left = ref (apply_base prog) in
+      let choice = ref ';' in
       while (!choice = ';') do
-            let unifs,left = solve_goal prog prog goal in
-            print_unifs (filter_unifier goalvars unifs);
-            choice := get1char()
-      done;; *)
+            let unifs,left' = solve_goal prog !left goal in
+            left := left';
+            let choice := get1char() in
+            if (!choice = ';') then
+                  print_unifs (filter_unifier goalvars unifs)
+            else 
+                  ()
+            
+      done;; 
 
       
        
