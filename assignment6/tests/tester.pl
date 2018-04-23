@@ -1,5 +1,9 @@
+male(a).
+male(b).
+male(c).
+female(d).
+married(d,a).
 
-edge(a,b).
-edge(b,c).
-path(X,X).
-path(X,Y):-edge(X,Z),path(Z,Y).
+son(b,a).
+son(c,a).
+son(X,Y) :- married(Y,Z),son(X,Z).

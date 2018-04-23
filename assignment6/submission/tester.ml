@@ -1,12 +1,14 @@
 
-
-(* let atom = Pred("id",[Var "X";Var "X"]);;
+Printf.printf "\nTesting id function\n";;
+let atom = Pred("id",[Var "X";Var "X"]);;
 
 let myprog = [Fact atom];;
 
 let prog_goal = Pred("id",[Var "Y"; Node ("Z",[Const "e"])]);;
 
- let tmp = top myprog prog_goal;;   *)
+let tmp = top myprog prog_goal;;
+
+Printf.printf "\nTesting graph theory\n";;
 
 let fact1 = Fact(Pred("edge",([Const "a"; Const "b"])));;
 let fact2 = Fact(Pred("edge",([Const "b"; Const "c"])));;
@@ -19,6 +21,7 @@ let myprog2 = [fact2;fact1;fact3;fact4;rule1;rule2];;
 let prog_goal = Pred("path",([Var "X";Var "y"]));;
 let tmp = top myprog2 prog_goal;;
 
+Printf.printf "\nTesting family tree\n";;
 
 let fact1 = Fact(Pred("male",([Const "a"])));;
 let fact2 = Fact(Pred("male",([Const "b"])));;
@@ -29,11 +32,14 @@ let fact6 = Fact(Pred("married",([Const "d";Const "a"])));;
 let fact7 = Fact(Pred("son",([Const "c";Const "a"])));;
 let fact8 = Fact(Pred("son",([Const "b";Const "c"])));;
 let rule1 = Rule(Pred("son",([Var "#X";Var "#Y"])), ([Pred("married",([Var "#Y";Var "#Z"]));Pred("son",([Var "#X";Var "#Z"]))]));;
-let rule2 = Rule(Pred("hubby",([Var "#X";Var "#Y"])), ([Pred("male",([Var "#X"]));Pred("married",([Var "#Y";Var "#X"]))]));; 
-let rule3 = Rule(Pred("gson",([Var "#X";Var "#Y"])), ([Pred("son",([Var "#X";Var "#Z"]));Pred("son",([Var "#Z";Var "#Y"]))]));;
+let rule2 = Rule(Pred("gson",([Var "#X";Var "#Y"])), ([Pred("son",([Var "#X";Var "#Z"]));Pred("son",([Var "#Z";Var "#Y"]))]));;
 
-let myprog = [fact1;fact2;fact3;fact4;fact6;fact7;fact8;rule1;rule2;rule3];;
-let prog_goal = Pred("hubby",([Var "X";Var "Y"]));;
+let myprog = [fact1;fact2;fact3;fact4;fact6;fact7;fact8;rule1;rule2;rule2];;
+let prog_goal = Pred("son",([Var "X";Var "Y"]));;
 top myprog prog_goal;;
+let prog_goal = Pred("gson",([Var "X";Var "Y"]));;
+top myprog prog_goal;;
+
+
 
 
