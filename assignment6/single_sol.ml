@@ -56,8 +56,6 @@ let rec union_pair l1 l2 = match l2 with
       |[] -> l1
       |(v,t)::xs -> if (find_pair l1 v) then (union l1 xs) else (union ((v,t)::l1) xs);;
 
-let union_pair_invert_priority l1 l2 = union_pair l2 l1;;
-
 (* return substituent value for a variable *)
 let rec findsub s v = match s with
       |[] -> v
@@ -65,6 +63,7 @@ let rec findsub s v = match s with
 
 (* implements homomorphic extension of substitution *)
 let rec subst sigma t = match t with
+      |Node(s,[]) -> (findsub sigma t)
       |Var v ->  (findsub sigma t)
       |Node(s,l) -> Node(s,(map (subst sigma) l))
       |_ -> t;; 
@@ -119,44 +118,30 @@ let rec find_vars t = match t with
 
 let find_vars_atomic (Pred(sym,l1)) = (fold union [] (map find_vars l1));;
 
-let rec reduce f l e = match l with
-      |[] -> e
-      |(x::xs) -> reduce f xs (f e x);;
-
-let concat l1 l2 = l1@l2;;
-
 
 let rec solve_goal prog workingprog goal = match (workingprog) with
       |[] -> []
       |((Fact atm1)::workingprog') -> 
             (try
                   let sol = mgu_atomic atm1 goal in
-                  sol::(solve_goal prog workingprog' goal)
-
+                  let vars = find_vars_atomic goal in
+                  sol
             with 
                   |NOT_UNIFIABLE -> solve_goal prog workingprog' goal)
       |((Rule (atm1,body))::workingprog') -> 
             try
                   let sol = mgu_atomic atm1 goal in
-                  let further_sols = solve_goallist prog (map (subst_atomic sol) body) in
-                  (map (union_pair_invert_priority sol) further_sols) @ (solve_goal prog workingprog' goal) 
+                  let newgoals = map (subst_atomic sol) body in
+                  (union_pair (solve_goallist prog newgoals) sol) 
             with
                   |NOT_UNIFIABLE -> solve_goal prog workingprog' goal
 
 and solve_goallist prog newgoals = match newgoals with
       |[] -> []
       |(x::xs) -> 
-            try
-                  let sol = (solve_goal prog prog x) in
-                  solve_compound prog sol xs  
-            with
-            | FAILURE -> []
-            
-and solve_compound prog sol rem = match sol with 
-      |[] -> []
-      |(s1::ss) -> let newgoals = map (subst_atomic s1) rem in
-                  (map (union_pair_invert_priority s1) (solve_goallist prog newgoals))@(solve_compound prog ss rem);;
-
+            let sol = (solve_goal prog prog x) in
+            let newgoals = map (subst_atomic sol) xs in
+            (union_pair (solve_goallist prog newgoals) sol);;
 
 let rec filter_unifier goalvars unif = match unif with
       |[] -> []
@@ -164,17 +149,10 @@ let rec filter_unifier goalvars unif = match unif with
 
 let top prog goal = 
       let goalvars = find_vars_atomic goal in
-      let unifs = solve_goal prog prog goal in
-      map (filter_unifier goalvars) (unifs);;
+      filter_unifier (goalvars) (solve_goal prog prog goal);;
        
       
 
 
             
 
-
-
-
-      
-      
-      
