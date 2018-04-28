@@ -28,4 +28,5 @@ clean:
 	rm -f *.cmo
 	rm -f *.mli
 	rm -f tester
+	rm -f run
 	

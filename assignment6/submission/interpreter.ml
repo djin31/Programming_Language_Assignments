@@ -210,6 +210,42 @@ and solve_goallist prog unseenprog newgoals sol_till_now= match (unseenprog,newg
       |_ -> raise FAILURE;;
 
 
+let rec eval_term term = match term with
+      |Node ("Equals",[t1;t2]) -> 
+            (match ((eval_term t1),(eval_term t2)) with
+                  |(Nat n1,Nat n2) -> if (n1=n2) then T else F
+                  | _ -> term)
+      |Node ("Greater",[t1;t2]) -> 
+            (match ((eval_term t1),(eval_term t2)) with
+                  |(Nat n1,Nat n2) -> if (n1>n2) then T else F
+                  | _ -> term)
+      |Node ("Less",[t1;t2]) -> 
+            (match ((eval_term t1),(eval_term t2)) with
+                  |(Nat n1,Nat n2) -> if (n1<n2) then T else F
+                  | _ -> term)
+      |Node ("Add",[t1;t2]) -> 
+            (match ((eval_term t1),(eval_term t2)) with
+                  |(Nat n1,Nat n2) -> Nat (n1+n2)
+                  | _ -> term)
+      |Node ("Sub",[t1;t2]) -> 
+            (match ((eval_term t1),(eval_term t2)) with
+                  |(Nat n1,Nat n2) -> Nat (n1-n2)
+                  | _ -> term)
+      |Node ("Mul",[t1;t2]) -> 
+            (match ((eval_term t1),(eval_term t2)) with
+                  |(Nat n1,Nat n2) -> Nat (n1*n2)
+                  | _ -> term)
+      |Node ("Div",[t1;t2]) -> 
+            (match ((eval_term t1),(eval_term t2)) with
+                  |(Nat n1,Nat n2) -> Nat (n1/n2)
+                  | _ -> term)
+      |Node("Cons",[x;xs]) -> 
+            (match (eval_term xs) with
+                  | Node ("List",l) -> Node ("List", (eval_term x)::l)
+                  | _ -> term)
+      |Node("Cons",[x]) -> Node ("List", [eval_term x])
+      | _ -> term;;
+
 let rec filter_unifier goalvars unif = match unif with
 	|[] -> []
 	|((v,sub)::xs) -> if (find goalvars v) then ((v,sub)::(filter_unifier goalvars xs)) else (filter_unifier goalvars xs);;
@@ -225,11 +261,11 @@ let rec print_terms t = match t with
       |CutCookie -> Printf.printf " Cut ";;
 
 let rec print_unifs unifs = match unifs with
-      |[] -> Printf.printf "enpty unifier"
+      |[] -> Printf.printf "empty unifier"
       |((v,sub)::[]) -> let _ = print_terms v in let _ = Printf.printf " = " in
-                        print_terms sub
+                        print_terms (eval_term sub)
       |((v,sub)::xs) -> let _ = print_terms v in let _ = Printf.printf " = " in
-                        let _ = print_terms sub in let _ = Printf.printf " , " in
+                        let _ = print_terms (eval_term sub) in let _ = Printf.printf " , " in
                         (* let _ = print_string "\n" in *)
                         print_unifs xs;;
 
@@ -247,9 +283,28 @@ let get1char () =
     Unix.tcsetattr Unix.stdin Unix.TCSADRAIN termio;
     res
 
+let rec modify_vars_term t = match t with
+      |Var s -> Var("#"^s)
+      |Node (s,l) -> Node (s,(map modify_vars_term l))
+      |_ -> t;;
+
+let modify_vars_atm atom = match atom with
+      |Pred (s,l) -> Pred (s,(map modify_vars_term l))
+      |_ -> atom;;
+
+let modify_vars_clause cl = match cl with
+      |Fact (atm) -> Fact(modify_vars_atm atm)
+      |Rule (head,body) -> Rule(modify_vars_atm head, map modify_vars_atm body);;
+
+let rec curate_prog cprog prog = match prog with 
+      |[] -> cprog
+      |(x::xs) -> curate_prog ((modify_vars_clause x)::cprog) xs;;
+
+                
 let solve_query prog goal = 
       let goalvars = find_vars_atomic goal in
-      let unifs = solve_goal prog prog goal [] in
+      let rprog = curate_prog prog [] in
+      let unifs = solve_goal rprog rprog goal [] in
       let solutions = ref (map (filter_unifier goalvars) unifs) in
       match !solutions with
       |[[]] ->    flush Pervasives.stdout;
