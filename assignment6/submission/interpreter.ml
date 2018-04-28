@@ -297,21 +297,21 @@ let modify_vars_clause cl = match cl with
       |Rule (head,body) -> Rule(modify_vars_atm head, map modify_vars_atm body);;
 
 let rec curate_prog cprog prog = match prog with 
-      |[] -> cprog
+      |[] -> List.rev cprog
       |(x::xs) -> curate_prog ((modify_vars_clause x)::cprog) xs;;
 
                 
 let solve_query prog goal = 
       let goalvars = find_vars_atomic goal in
-      let rprog = curate_prog prog [] in
+      let rprog = curate_prog [] prog in
       let unifs = solve_goal rprog rprog goal [] in
       let solutions = ref (map (filter_unifier goalvars) unifs) in
       match !solutions with
       |[[]] ->    flush Pervasives.stdout;
-                  Printf.printf "\n True\n";
+                  Printf.printf "\n True\n\n";
                   flush Pervasives.stdout
       |[] ->      flush Pervasives.stdout;
-                  Printf.printf "\n False\n";
+                  Printf.printf "\n False\n\n";
                   flush Pervasives.stdout
       |_ ->
             let choice = ref ';' in
@@ -323,13 +323,13 @@ let solve_query prog goal =
                         then choice := '.'
                         else
                               flush Pervasives.stdout;
-                              Printf.printf "\n Press ; to continue\n";
+                              Printf.printf "\n Press ; to continue search\n";
                               print_unifs unif;
                               flush Pervasives.stdout;
                               choice := get1char()
                   with
                   |_ -> flush Pervasives.stdout;
-                        Printf.printf "\n False\n";
+                        Printf.printf "\n False\n\n";
                         flush Pervasives.stdout;
                         choice := '.'
             done;;
