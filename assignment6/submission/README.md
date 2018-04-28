@@ -7,7 +7,7 @@ id(X,X).
 ```
 Then you can query things like:
 ```
-id(X,2+3\*4).
+id(X,2+3*4).
 ```
 to get X = 14 as answer.
 This feature is not supported by the standard Prolog interpreter.

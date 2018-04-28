@@ -72,3 +72,5 @@ mother(M,C) :- parent(M,C), witch(M).
 son(S,P) :- wizard(S), parent(P,S).
 
 daughter(D,P) :- witch(D), parent(P,D).
+
+id(X,X).

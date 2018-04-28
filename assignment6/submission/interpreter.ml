@@ -255,9 +255,9 @@ let rec print_terms t = match t with
       |Var v -> Printf.printf " Var %s " v
       |Const s-> Printf.printf " %s " s
       |Nat n -> Printf.printf " %d " n
-      |T -> Printf.printf "true"
-      |F -> Printf.printf "false"
-      |Node (s,l) ->  let _ = Printf.printf " Node %s " s in List.hd (map print_terms l)
+      |T -> Printf.printf " true "
+      |F -> Printf.printf " false "
+      |Node (s,l) ->  let _ = Printf.printf " Node (%s, " s in let _ = List.hd (map print_terms (List.rev l)) in Printf.printf ") "
       |CutCookie -> Printf.printf " Cut ";;
 
 let rec print_unifs unifs = match unifs with
