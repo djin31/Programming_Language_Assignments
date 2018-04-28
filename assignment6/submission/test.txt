@@ -1,0 +1,1 @@
+edge(a,b).edge(b,c).edge(c,d).edge(b,e).path(X12,X12).path(X12,Y12):-edge(X12,Z12),path(Z12,Y12).
