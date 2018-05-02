@@ -1,0 +1,32 @@
+%Program
+male(john).
+parent(john).
+father(X) :- male(X), parent(X).
+male(andrew_doe).
+female(mary).
+
+%Goal:
+goal11(a).
+goal12(john):-male(john).
+goal13(andrew):-male(andrew).
+goal14(X):-male(X).
+goal15(X):-father(john),female(X).
+goal16(X,Y):-father(X),father(Y).
+
+
+%Program
+edge(a,b).
+edge(b,c).
+edge(c,d).
+edge(a,d).
+path(X,Y):- edge(X,Y).
+path(X,Y):- edge(X,Z),path(Z,Y).
+
+
+%Test case
+goal21(a,c):- path(a,c).
+goal22(X):- edge(a,X).
+goal23(X):- path(a,X).
+goal24(X,Y):- edge(X,Y).
+goal25(X,Y):- path(X,Y).
+goal26(X,Y):- path(X,Y),!.
