@@ -18,7 +18,7 @@ type clause =
 
 type program = clause list;;  
 
-type goal = atomic;;
+type goal = atomic list;;
 
 let rec map f l = match l with 
 	|[] -> []
@@ -300,12 +300,20 @@ let rec curate_prog cprog prog = match prog with
       |[] -> List.rev cprog
       |(x::xs) -> curate_prog ((modify_vars_clause x)::cprog) xs;;
 
+let rec last l = match l with
+      |[] -> raise FAILURE
+      |[x] -> x
+      |(x::xl) -> last xl;;
+
+let curate_sol solutions goal = match (last goal) with
+      |Cut -> [List.hd solutions]
+      |_ -> solutions;;
                 
 let solve_query prog goal = 
-      let goalvars = find_vars_atomic goal in
+      let goalvars = reduce concat (map find_vars_atomic goal) [] in
       let rprog = curate_prog [] prog in
-      let unifs = solve_goal rprog rprog goal [] in
-      let solutions = ref (map (filter_unifier goalvars) unifs) in
+      let unifs = solve_goallist rprog rprog goal [] in
+      let solutions = ref (curate_sol (map (filter_unifier goalvars) unifs) goal) in
       match !solutions with
       |[[]] ->    flush Pervasives.stdout;
                   Printf.printf "\n True\n\n";

@@ -32,8 +32,15 @@ let rec main =
 		let _ = Printf.printf "?-" in
 		let _ = flush stdout in
 		let inp = try read_line() with End_of_file -> Printf.printf "\nExiting\n" ;exit 0 in
-		let query = load_query inp in
-		solve_query prog query 
+		try
+			let query = load_query inp in
+			if (query = []) then 
+			Printf.printf "True\n" 
+		else
+			solve_query prog query 
+		with
+		| _ -> Printf.printf "Unknown query\n"
+		
 	done;;
 
 	
